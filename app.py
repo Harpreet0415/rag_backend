@@ -12,19 +12,9 @@ app = Flask(__name__)
 
 # CORS Configuration for Production
 # Allow your deployed frontend and local development
-CORS(app, 
-     resources={
-         r"/api/*": {
-             "origins": [
-                 "https://rag-frontend-teal-nu.vercel.app",  # Your Vercel frontend
-                 "http://localhost:5173",                    # Local development
-                 "http://localhost:5000"                     # Local backend testing
-             ],
-             "allow_headers": ["Content-Type", "X-Gemini-Key", "Authorization"],
-             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             "supports_credentials": True
-         }
-     })
+CORS(app, resources={r"/api/*": {"origins": "*"}}, 
+     allow_headers=["Content-Type", "X-Gemini-Key"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # Alternative: More flexible configuration for testing
 # Uncomment this if the above doesn't work

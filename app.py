@@ -9,7 +9,28 @@ from vector_store import VectorStore
 from rag_pipeline import RAGPipeline
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Gemini-Key"])
+
+# CORS Configuration for Production
+# Allow your deployed frontend and local development
+CORS(app, 
+     resources={
+         r"/api/*": {
+             "origins": [
+                 "https://rag-frontend.vercel.app",      # Your production frontend
+                 "https://rag-frontend-git-main.vercel.app",  # Preview deployments
+                 "http://localhost:5173",                 # Local Vite dev server
+                 "http://localhost:3000",                 # Alternative local port
+                 "https://rag-frontend-harpreet0415.vercel.app"  # Any other Vercel URLs
+             ],
+             "allow_headers": ["Content-Type", "X-Gemini-Key", "Authorization"],
+             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             "supports_credentials": True
+         }
+     })
+
+# Alternative: More flexible configuration for testing
+# Uncomment this if the above doesn't work
+# CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "X-Gemini-Key"])
 
 UPLOAD_FOLDER = "uploads"
 INDEX_FOLDER = "indexes"
@@ -39,15 +60,18 @@ def get_or_create_session(session_id: str, api_key: str = ""):
     return sessions[session_id]
 
 
-
 @app.route("/api/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok", "message": "RAG Server is running"})
 
 
-@app.route("/api/upload", methods=["POST"])
+@app.route("/api/upload", methods=["POST", "OPTIONS"])
 def upload_pdf():
     """Upload and process a PDF file."""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return '', 200
+    
     print(f"Received upload request. Files: {request.files}")
     if "file" not in request.files:
         print("Error: No file provided")
@@ -119,9 +143,13 @@ def upload_pdf():
             print("Cleanup: PDF file removed")
 
 
-@app.route("/api/ask", methods=["POST"])
+@app.route("/api/ask", methods=["POST", "OPTIONS"])
 def ask_question():
     """Answer a question using the RAG pipeline."""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return '', 200
+    
     data = request.get_json()
     session_id = data.get("session_id")
     question = data.get("question", "").strip()
@@ -139,9 +167,13 @@ def ask_question():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/history", methods=["GET"])
+@app.route("/api/history", methods=["GET", "OPTIONS"])
 def get_history():
     """Get chat history for a session."""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return '', 200
+    
     session_id = request.args.get("session_id")
     if not session_id or session_id not in sessions:
         return jsonify({"history": []})
@@ -150,9 +182,13 @@ def get_history():
     return jsonify({"history": history})
 
 
-@app.route("/api/clear_history", methods=["POST"])
+@app.route("/api/clear_history", methods=["POST", "OPTIONS"])
 def clear_history():
     """Clear chat history for a session."""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return '', 200
+    
     data = request.get_json()
     session_id = data.get("session_id")
     if session_id and session_id in sessions:
@@ -160,14 +196,37 @@ def clear_history():
     return jsonify({"status": "cleared"})
 
 
-@app.route("/api/session_info", methods=["GET"])
+@app.route("/api/session_info", methods=["GET", "OPTIONS"])
 def session_info():
     """Get document info for a session."""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return '', 200
+    
     session_id = request.args.get("session_id")
     if not session_id or session_id not in sessions:
         return jsonify({"doc_info": None})
     return jsonify({"doc_info": sessions[session_id]["doc_info"]})
 
 
+@app.route("/", methods=["GET"])
+def root():
+    """Root endpoint for health check."""
+    return jsonify({
+        "status": "online",
+        "service": "RAG Backend",
+        "version": "1.0.0",
+        "endpoints": [
+            "/api/health",
+            "/api/upload",
+            "/api/ask",
+            "/api/history",
+            "/api/clear_history",
+            "/api/session_info"
+        ]
+    })
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)

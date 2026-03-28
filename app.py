@@ -16,11 +16,9 @@ CORS(app,
      resources={
          r"/api/*": {
              "origins": [
-                 "https://rag-frontend.vercel.app",      # Your production frontend
-                 "https://rag-frontend-git-main.vercel.app",  # Preview deployments
-                 "http://localhost:5173",                 # Local Vite dev server
-                 "http://localhost:3000",                 # Alternative local port
-                 "https://rag-frontend-harpreet0415.vercel.app"  # Any other Vercel URLs
+                 "https://rag-frontend-teal-nu.vercel.app",  # Your Vercel frontend
+                 "http://localhost:5173",                    # Local development
+                 "http://localhost:5000"                     # Local backend testing
              ],
              "allow_headers": ["Content-Type", "X-Gemini-Key", "Authorization"],
              "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -67,8 +65,7 @@ def health():
 
 @app.route("/api/upload", methods=["POST", "OPTIONS"])
 def upload_pdf():
-    """Upload and process a PDF file."""
-    # Handle preflight OPTIONS request
+    # Handle preflight request
     if request.method == "OPTIONS":
         return '', 200
     
